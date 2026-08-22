@@ -53,6 +53,47 @@ spec:
         - CREATE EXTENSION IF NOT EXISTS temporal_tables;
 ```
 
+## Usage with podman / docker run
+
+The CNPG base has no `ENTRYPOINT` (operator injects boot logic), so plain `run` must bootstrap the cluster and start `postgres` explicitly:
+
+```bash
+podman run --rm -it \
+    --user 26 \
+    -e PGDATA=/var/lib/postgresql/data \
+    -p 5432:5432 \
+    docker.io/hubbitus/postgres-cnpg-extensions:pg18-latest \
+    bash -c 'initdb -U postgres --auth=trust && \
+        echo "shared_preload_libraries=pg_cron" >> "$PGDATA/postgresql.conf" && \
+        postgres -c listen_addresses=*'
+```
+
+(Replace `podman` with `docker` — same flags.)
+
+## Usage with podman-compose / docker-compose
+
+```yaml
+services:
+  pg:
+    image: docker.io/hubbitus/postgres-cnpg-extensions:pg18-latest
+    user: "26"
+    environment:
+      PGDATA: /var/lib/postgresql/data
+    command:
+      - bash
+      - -c
+      - |
+        [ -s "$$PGDATA/PG_VERSION" ] || initdb -U postgres --auth=trust
+        grep -q pg_cron "$$PGDATA/postgresql.conf" || echo "shared_preload_libraries=pg_cron" >> "$$PGDATA/postgresql.conf"
+        exec postgres -c listen_addresses=*
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
+```
+
 ## Local build
 
 ```bash
