@@ -1,8 +1,15 @@
 # postgres-cnpg-extensions
 
+[![Build](https://github.com/Hubbitus/postgres-cnpg-extensions.container/actions/workflows/build.yml/badge.svg)](https://github.com/Hubbitus/postgres-cnpg-extensions.container/actions/workflows/build.yml)
+[![Docker Hub](https://img.shields.io/docker/pulls/hubbitus/postgres-cnpg-extensions?logo=docker&label=Docker%20Hub)](https://hub.docker.com/r/hubbitus/postgres-cnpg-extensions)
+[![Image size](https://img.shields.io/docker/image-size/hubbitus/postgres-cnpg-extensions/pg18-latest?logo=docker)](https://hub.docker.com/r/hubbitus/postgres-cnpg-extensions/tags)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 CNPG PostgreSQL 18 image bundling extensions used across Hubbitus projects.
 
 Public re-usable image — not tied to any specific downstream project.
+
+Published: [`docker.io/hubbitus/postgres-cnpg-extensions`](https://hub.docker.com/r/hubbitus/postgres-cnpg-extensions).
 
 ## What's inside
 
