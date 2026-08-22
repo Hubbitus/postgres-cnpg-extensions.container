@@ -2,18 +2,20 @@
 
 CNPG PostgreSQL 18 image bundling extensions used across Hubbitus projects.
 
+Public re-usable image — not tied to any specific downstream project.
+
 ## What's inside
 
 Built on top of [`cloudnative-pg/postgresql`](https://github.com/cloudnative-pg/postgres-containers) `18.x-bookworm` (upstream operational layer preserved — init hooks, `barman-cloud`, pgaudit, healthcheck).
 
 Extensions added:
 
-| Extension         | Version | Source                                                   | ADR                                                                                              |
-|-------------------|---------|----------------------------------------------------------|--------------------------------------------------------------------------------------------------|
-| `pgvector`        | 0.8.6   | [pgvector/pgvector](https://github.com/pgvector/pgvector) — source build | [ADR 0018](https://gitlab.com/HubbitusFamily/neinache/-/blob/main/docs/architecture/decisions/0018-pgvector-in-shared-cnpg-image.md) |
-| `pg_cron`         | 1.6.x   | PGDG apt (`postgresql-18-cron`)                          | [ADR 0015](https://gitlab.com/HubbitusFamily/neinache/-/blob/main/docs/architecture/decisions/0015-pg-cron-reconciliation.md) |
-| `pg_jsonschema`   | 0.3.4   | [supabase/pg_jsonschema](https://github.com/supabase/pg_jsonschema) — source build (Rust/pgrx) | [ADR 0016](https://gitlab.com/HubbitusFamily/neinache/-/blob/main/docs/architecture/decisions/0016-pg-jsonschema-for-pipelines-definition.md) |
-| `temporal_tables` | 1.2.2   | [arkhipov/temporal_tables](https://github.com/arkhipov/temporal_tables) — source build | [ADR 0009](https://gitlab.com/HubbitusFamily/neinache/-/blob/main/docs/architecture/decisions/0009-temporal-tables-for-issues-history.md) |
+| Extension         | Version | Source                                                                                         |
+|-------------------|---------|------------------------------------------------------------------------------------------------|
+| `pgvector`        | 0.8.6   | [pgvector/pgvector](https://github.com/pgvector/pgvector) — source build                       |
+| `pg_cron`         | 1.6.x   | PGDG apt (`postgresql-18-cron`)                                                                |
+| `pg_jsonschema`   | 0.3.4   | [supabase/pg_jsonschema](https://github.com/supabase/pg_jsonschema) — source build (Rust/pgrx) |
+| `temporal_tables` | 1.2.2   | [arkhipov/temporal_tables](https://github.com/arkhipov/temporal_tables) — source build         |
 
 ## Image tags
 
