@@ -90,7 +90,7 @@ jobs:
           context: .
           platforms: linux/amd64
           load: true
-          tags: pcne:smoke
+          tags: pcne:18.0-smoke
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -100,7 +100,7 @@ jobs:
               -e POSTGRES_PASSWORD=smoke \
               -e POSTGRES_USER=smoke \
               -e POSTGRES_DB=smoke \
-              pcne:smoke \
+              pcne:18.0-smoke \
               -c config_file=/etc/postgresql-cnpg-extensions.conf
 
       - name: Wait for pg_isready (max 60s)
@@ -156,7 +156,7 @@ jobs:
           context: .
           platforms: linux/amd64
           load: true
-          tags: pcne:smoke
+          tags: pcne:18.0-smoke
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -167,7 +167,7 @@ jobs:
           wait: 60s
 
       - name: Load image into kind
-        run: kind load docker-image pcne:smoke --name pcne
+        run: kind load docker-image pcne:18.0-smoke --name pcne
 
       - name: Install CNPG operator (v1.30.0)
         run: |
@@ -184,7 +184,7 @@ jobs:
             name: pcne-smoke
           spec:
             instances: 1
-            imageName: pcne:smoke
+            imageName: pcne:18.0-smoke
             imagePullPolicy: Never
             postgresql:
               shared_preload_libraries:
