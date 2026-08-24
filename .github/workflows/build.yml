@@ -90,7 +90,7 @@ jobs:
           context: .
           platforms: linux/amd64
           load: true
-          tags: pcne:smoke
+          tags: pcne:18.0-smoke
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -100,18 +100,18 @@ jobs:
               -e POSTGRES_PASSWORD=smoke \
               -e POSTGRES_USER=smoke \
               -e POSTGRES_DB=smoke \
-              pcne:smoke \
+              pcne:18.0-smoke \
               -c config_file=/etc/postgresql-cnpg-extensions.conf
 
-      - name: Wait for pg_isready (max 60s)
+      - name: Wait for DB reachable (max 60s)
         run: |
           for i in $(seq 1 60); do
-              if docker exec pcne-smoke pg_isready -U smoke -d smoke -q; then
+              if docker exec pcne-smoke psql -U smoke -d smoke -tAc 'SELECT 1' >/dev/null 2>&1; then
                   echo "ready after ${i}s"; exit 0
               fi
               sleep 1
           done
-          echo "pg_isready timeout"; docker logs pcne-smoke; exit 1
+          echo "DB not reachable"; docker logs pcne-smoke; exit 1
 
       - name: Assert PG major = 18
         run: |
@@ -140,3 +140,109 @@ jobs:
       - name: Cleanup
         if: always()
         run: docker rm -f pcne-smoke || true
+
+  smoke-cnpg:
+    runs-on: ubuntu-24.04
+    needs: []
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (amd64, load)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: pcne:18.0-smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.14.0
+        with:
+          cluster_name: pcne
+          wait: 60s
+
+      - name: Load image into kind
+        run: kind load docker-image pcne:18.0-smoke --name pcne
+
+      - name: Install CNPG operator (v1.30.0)
+        run: |
+          kubectl apply --server-side -f \
+              https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.30/releases/cnpg-1.30.0.yaml
+          kubectl -n cnpg-system rollout status deploy/cnpg-controller-manager --timeout=180s
+
+      - name: Apply Cluster CR
+        run: |
+          cat <<'YAML' | kubectl apply -f -
+          apiVersion: postgresql.cnpg.io/v1
+          kind: Cluster
+          metadata:
+            name: pcne-smoke
+          spec:
+            instances: 1
+            imageName: pcne:18.0-smoke
+            imagePullPolicy: Never
+            postgresql:
+              shared_preload_libraries:
+                - pg_cron
+              parameters:
+                cron.database_name: app
+            bootstrap:
+              initdb:
+                database: app
+                owner: app
+                postInitApplicationSQL:
+                  - CREATE EXTENSION IF NOT EXISTS vector;
+                  - CREATE EXTENSION IF NOT EXISTS pg_jsonschema;
+                  - CREATE EXTENSION IF NOT EXISTS temporal_tables;
+                  - CREATE EXTENSION IF NOT EXISTS pg_cron;
+            storage:
+              size: 1Gi
+          YAML
+
+      - name: Wait for cluster healthy (max 5 min)
+        run: |
+          for i in $(seq 1 60); do
+              phase=$(kubectl get cluster pcne-smoke -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+              echo "attempt ${i}: phase=${phase}"
+              if [ "$phase" = "Cluster in healthy state" ]; then
+                  echo "healthy after $((i*5))s"; exit 0
+              fi
+              sleep 5
+          done
+          echo "cluster did not become healthy"
+          kubectl get cluster pcne-smoke -o yaml
+          kubectl -n default get pods
+          exit 1
+
+      - name: Assert extensions loaded (via operator-managed init)
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl exec pcne-smoke-1 -c postgres -- psql -U postgres -d app -tAc \
+              "SELECT extname || ' ' || extversion FROM pg_extension WHERE extname IN ('vector','temporal_tables','pg_jsonschema') ORDER BY extname;" \
+              | tee /tmp/exts.txt
+          grep -q '^vector '          /tmp/exts.txt || { echo "vector missing"; exit 1; }
+          grep -q '^temporal_tables ' /tmp/exts.txt || { echo "temporal_tables missing"; exit 1; }
+          grep -q '^pg_jsonschema '   /tmp/exts.txt || { echo "pg_jsonschema missing"; exit 1; }
+          kubectl exec pcne-smoke-1 -c postgres -- psql -U postgres -d app -tAc \
+              "SELECT extname || ' ' || extversion FROM pg_extension WHERE extname = 'pg_cron';" \
+              | tee /tmp/pg_cron.txt
+          grep -q '^pg_cron ' /tmp/pg_cron.txt || { echo "pg_cron missing"; exit 1; }
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          kubectl get cluster pcne-smoke -o yaml || true
+          kubectl -n default describe pod pcne-smoke-1 || true
+          kubectl -n default logs pcne-smoke-1 -c postgres --tail=200 || true
+          echo "=== initdb job pod logs ==="
+          for p in $(kubectl -n default get pods -l cnpg.io/jobRole=initdb -o name); do
+              echo "--- $p ---"
+              kubectl -n default logs "$p" --all-containers --tail=200 || true
+          done
+          kubectl -n cnpg-system logs -l app.kubernetes.io/name=cloudnative-pg --tail=200 || true

@@ -17,6 +17,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 - CI smoke job: builds amd64 image on every PR, boots it standalone, asserts
   `pg_isready`, PG major = 18, and all four extensions (`vector`, `temporal_tables`,
   `pg_jsonschema`, `pg_cron`) `CREATE EXTENSION` successfully.
+- CI `smoke-cnpg` job ([#4](https://github.com/Hubbitus/postgres-cnpg-extensions.container/issues/4)):
+  spins up kind cluster + CNPG operator v1.30.0, applies a `Cluster` CR pointing at
+  the just-built image, waits for healthy, asserts all four extensions loaded via
+  operator-managed init. Catches regressions in ENTRYPOINT/CMD override contract,
+  `USER 26`, PGDATA perms, and extension load under operator management.
 - Initial scaffold: Dockerfile (multi-stage), GHA build+publish workflow, README.
 - Bundled extensions on CNPG PG 18 `bookworm` base:
   - `pgvector` v0.8.6 (source build)
