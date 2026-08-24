@@ -96,7 +96,7 @@ jobs:
 
       - name: Run standalone container
         run: |
-          docker run -d --name pcne-smoke \
+          docker run -d --rm --name pcne-smoke \
               -e POSTGRES_PASSWORD=smoke \
               -e POSTGRES_USER=smoke \
               -e POSTGRES_DB=smoke \
