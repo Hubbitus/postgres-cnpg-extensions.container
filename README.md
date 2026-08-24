@@ -74,7 +74,20 @@ podman run --rm \
 
 Supported env: `POSTGRES_USER` (default `postgres`), `POSTGRES_PASSWORD` (required unless `POSTGRES_HOST_AUTH_METHOD=trust`), `POSTGRES_DB`, `POSTGRES_INITDB_ARGS`, `POSTGRES_HOST_AUTH_METHOD`, `POSTGRES_INITDB_WALDIR`. Init SQL: mount into `/docker-entrypoint-initdb.d/`. See [official postgres docs](https://hub.docker.com/_/postgres) for details.
 
-Standalone mode does not auto-load `pg_cron` (CNPG operator manages `shared_preload_libraries` in the CNPG mode). To enable `pg_cron` in standalone runs, mount a custom config with `shared_preload_libraries=pg_cron` and pass `-c config_file=...`.
+Init SQL files may contain secrets (e.g. `CREATE ROLE ... PASSWORD ...`). The image sets `/docker-entrypoint-initdb.d/` to mode `0750`; keep host-side files `0640` or stricter when bind-mounting.
+
+Standalone mode does not auto-load `pg_cron` (CNPG operator manages `shared_preload_libraries` in the CNPG mode). To enable `pg_cron` in standalone runs, pass the pre-shipped config via `-c config_file=...`:
+
+```bash
+podman run --rm \
+    -e POSTGRES_PASSWORD=secret \
+    -e POSTGRES_DB=app \
+    -p 5432:5432 \
+    docker.io/hubbitus/postgres-cnpg-extensions:pg18-latest \
+    -c config_file=/etc/postgresql-cnpg-extensions.conf
+```
+
+(The image ships `/etc/postgresql-cnpg-extensions.conf` containing `shared_preload_libraries = 'pg_cron'`.)
 
 Under the CNPG operator our `ENTRYPOINT` / `CMD` are silently overridden — no behavioural change vs. the previous release.
 
@@ -93,6 +106,8 @@ try (var pg = new PostgreSQLContainer<>(image)) {
 ```
 
 ## Usage with podman-compose / docker-compose
+
+`POSTGRES_PASSWORD` is required (unless `POSTGRES_HOST_AUTH_METHOD=trust`) — the stock `postgres:18` entrypoint refuses to boot without it.
 
 ```yaml
 services:

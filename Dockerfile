@@ -106,9 +106,9 @@ COPY docker-ensure-initdb.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-ensure-initdb.sh \
     && ln -sf docker-ensure-initdb.sh /usr/local/bin/docker-enforce-initdb.sh \
     && mkdir -p /docker-entrypoint-initdb.d /var/lib/postgresql/${PG_MAJOR}/docker \
-    && chown -R 26:102 /docker-entrypoint-initdb.d /var/lib/postgresql/${PG_MAJOR}
-ENV PG_MAJOR=${PG_MAJOR} \
-    PGDATA=/var/lib/postgresql/${PG_MAJOR}/docker
+    && chown 26:102 /docker-entrypoint-initdb.d /var/lib/postgresql/${PG_MAJOR}/docker \
+    && chmod 0750 /docker-entrypoint-initdb.d
+ENV PGDATA=/var/lib/postgresql/${PG_MAJOR}/docker
 
 USER 26
 
