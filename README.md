@@ -62,41 +62,66 @@ spec:
 
 ## Usage with podman / docker run
 
-The CNPG base has no `ENTRYPOINT` (operator injects boot logic), so plain `run` must bootstrap the cluster and start `postgres` explicitly:
+Standalone boot uses the stock `postgres:18` entrypoint (dual-mode, [#2](https://github.com/Hubbitus/postgres-cnpg-extensions.container/issues/2)) — same env vars as the official `postgres` image:
 
 ```bash
-podman run --rm -it \
-    --user 26 \
-    -e PGDATA=/var/lib/postgresql/data \
+podman run --rm \
+    -e POSTGRES_PASSWORD=secret \
+    -e POSTGRES_DB=app \
+    -p 5432:5432 \
+    docker.io/hubbitus/postgres-cnpg-extensions:pg18-latest
+```
+
+Supported env: `POSTGRES_USER` (default `postgres`), `POSTGRES_PASSWORD` (required unless `POSTGRES_HOST_AUTH_METHOD=trust`), `POSTGRES_DB`, `POSTGRES_INITDB_ARGS`, `POSTGRES_HOST_AUTH_METHOD`, `POSTGRES_INITDB_WALDIR`. Init SQL: mount into `/docker-entrypoint-initdb.d/`. See [official postgres docs](https://hub.docker.com/_/postgres) for details.
+
+Init SQL files may contain secrets (e.g. `CREATE ROLE ... PASSWORD ...`). The image sets `/docker-entrypoint-initdb.d/` to mode `0750`; keep host-side files `0640` or stricter when bind-mounting.
+
+Standalone mode does not auto-load `pg_cron` (CNPG operator manages `shared_preload_libraries` in the CNPG mode). To enable `pg_cron` in standalone runs, pass the pre-shipped config via `-c config_file=...`:
+
+```bash
+podman run --rm \
+    -e POSTGRES_PASSWORD=secret \
+    -e POSTGRES_DB=app \
     -p 5432:5432 \
     docker.io/hubbitus/postgres-cnpg-extensions:pg18-latest \
-    bash -c 'initdb -U postgres --auth=trust && \
-        echo "shared_preload_libraries=pg_cron" >> "$PGDATA/postgresql.conf" && \
-        postgres -c listen_addresses=*'
+    -c config_file=/etc/postgresql-cnpg-extensions.conf
 ```
+
+(The image ships `/etc/postgresql-cnpg-extensions.conf` containing `shared_preload_libraries = 'pg_cron'`.)
+
+Under the CNPG operator our `ENTRYPOINT` / `CMD` are silently overridden — no behavioural change vs. the previous release.
 
 (Replace `podman` with `docker` — same flags.)
 
+### Testcontainers (Java)
+
+```java
+var image = DockerImageName
+    .parse("docker.io/hubbitus/postgres-cnpg-extensions:pg18-latest")
+    .asCompatibleSubstituteFor("postgres");
+try (var pg = new PostgreSQLContainer<>(image)) {
+    pg.start();
+    // pg.getJdbcUrl(), pg.getUsername(), pg.getPassword()
+}
+```
+
 ## Usage with podman-compose / docker-compose
+
+`POSTGRES_PASSWORD` is required (unless `POSTGRES_HOST_AUTH_METHOD=trust`) — the stock `postgres:18` entrypoint refuses to boot without it.
 
 ```yaml
 services:
   pg:
     image: docker.io/hubbitus/postgres-cnpg-extensions:pg18-latest
-    user: "26"
     environment:
-      PGDATA: /var/lib/postgresql/data
-    command:
-      - bash
-      - -c
-      - |
-        [ -s "$$PGDATA/PG_VERSION" ] || initdb -U postgres --auth=trust
-        grep -q pg_cron "$$PGDATA/postgresql.conf" || echo "shared_preload_libraries=pg_cron" >> "$$PGDATA/postgresql.conf"
-        exec postgres -c listen_addresses=*
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/18/docker
+
 volumes:
   pgdata:
 ```

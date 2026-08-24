@@ -8,6 +8,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ### Added
 
+- Dual-mode entrypoint ([#2](https://github.com/Hubbitus/postgres-cnpg-extensions.container/issues/2)):
+  standalone `podman run` / `docker run` / Testcontainers now boot the container
+  via the stock `postgres:18` `docker-entrypoint.sh` (honouring `POSTGRES_PASSWORD`,
+  `POSTGRES_USER`, `POSTGRES_DB`, `POSTGRES_INITDB_ARGS`, `docker-entrypoint-initdb.d/*`).
+  CNPG operator mode unaffected — operator overrides `command`/`args`, our
+  `ENTRYPOINT` + `CMD` never execute under operator management.
+- CI smoke job: builds amd64 image on every PR, boots it standalone, asserts
+  `pg_isready`, PG major = 18, and all four extensions (`vector`, `temporal_tables`,
+  `pg_jsonschema`, `pg_cron`) `CREATE EXTENSION` successfully.
 - Initial scaffold: Dockerfile (multi-stage), GHA build+publish workflow, README.
 - Bundled extensions on CNPG PG 18 `bookworm` base:
   - `pgvector` v0.8.6 (source build)

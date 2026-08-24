@@ -90,10 +90,33 @@ COPY --from=builder /usr/share/postgresql/${PG_MAJOR}/extension/   /usr/share/po
 RUN mkdir -p /usr/share/postgresql/${PG_MAJOR}/extension \
     && printf "shared_preload_libraries = 'pg_cron'\n" > /etc/postgresql-cnpg-extensions.conf
 
+# ---------- Dual-mode entrypoint (issue #2) ----------
+# Under CNPG operator: operator sets `command`/`args` on the pod, overriding both
+# ENTRYPOINT and CMD below — this block is a no-op for operator-managed clusters.
+# Under standalone `docker run` / `podman run` / Testcontainers: the stock postgres:18
+# entrypoint kicks in, honouring POSTGRES_PASSWORD / POSTGRES_USER / POSTGRES_DB /
+# POSTGRES_INITDB_ARGS / docker-entrypoint-initdb.d/*.
+#
+# PG binaries already on PATH via CNPG base (/usr/lib/postgresql/18/bin).
+# PGDATA matches stock postgres:18 default (docker-library/postgres convention).
+# Ownership: /var/lib/postgresql is owned by uid 26 (postgres) in CNPG base, so
+# non-root container start (USER 26 below) can mkdir/init PGDATA without chown.
+COPY docker-entrypoint.sh /usr/local/bin/
+COPY docker-ensure-initdb.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-ensure-initdb.sh \
+    && ln -sf docker-ensure-initdb.sh /usr/local/bin/docker-enforce-initdb.sh \
+    && mkdir -p /docker-entrypoint-initdb.d /var/lib/postgresql/${PG_MAJOR}/docker \
+    && chown 26:102 /docker-entrypoint-initdb.d /var/lib/postgresql/${PG_MAJOR}/docker \
+    && chmod 0750 /docker-entrypoint-initdb.d
+ENV PGDATA=/var/lib/postgresql/${PG_MAJOR}/docker
+
 USER 26
 
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["postgres"]
+
 LABEL org.opencontainers.image.title="postgres-cnpg-extensions" \
-      org.opencontainers.image.description="CNPG PostgreSQL 18 with pgvector, pg_cron, pg_jsonschema, temporal_tables" \
+      org.opencontainers.image.description="CNPG PostgreSQL 18 with pgvector, pg_cron, pg_jsonschema, temporal_tables (dual-mode: CNPG operator + standalone)" \
       org.opencontainers.image.source="https://github.com/Hubbitus/postgres-cnpg-extensions.container" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.vendor="Hubbitus"
