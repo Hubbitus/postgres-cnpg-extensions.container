@@ -103,15 +103,15 @@ jobs:
               pcne:18.0-smoke \
               -c config_file=/etc/postgresql-cnpg-extensions.conf
 
-      - name: Wait for pg_isready (max 60s)
+      - name: Wait for DB reachable (max 60s)
         run: |
           for i in $(seq 1 60); do
-              if docker exec pcne-smoke pg_isready -U smoke -d smoke -q; then
+              if docker exec pcne-smoke psql -U smoke -d smoke -tAc 'SELECT 1' >/dev/null 2>&1; then
                   echo "ready after ${i}s"; exit 0
               fi
               sleep 1
           done
-          echo "pg_isready timeout"; docker logs pcne-smoke; exit 1
+          echo "DB not reachable"; docker logs pcne-smoke; exit 1
 
       - name: Assert PG major = 18
         run: |
@@ -238,4 +238,9 @@ jobs:
           kubectl get cluster pcne-smoke -o yaml || true
           kubectl -n default describe pod pcne-smoke-1 || true
           kubectl -n default logs pcne-smoke-1 -c postgres --tail=200 || true
+          echo "=== initdb job pod logs ==="
+          for p in $(kubectl -n default get pods -l cnpg.io/jobRole=initdb -o name); do
+              echo "--- $p ---"
+              kubectl -n default logs "$p" --all-containers --tail=200 || true
+          done
           kubectl -n cnpg-system logs -l app.kubernetes.io/name=cloudnative-pg --tail=200 || true
