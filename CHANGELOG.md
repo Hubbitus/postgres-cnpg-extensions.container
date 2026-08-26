@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [S
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING** — Image tags now start with the major version digit instead of the `pg` prefix
+  ([#6](https://github.com/Hubbitus/postgres-cnpg-extensions.container/issues/6)):
+  `pg18-latest` → `18-latest`, `pg18-<date>-<sha>` → `18-<date>-<sha>`, `pg18-<sha>` → `18-<sha>`.
+  Required because the CloudNativePG (CNPG) `Cluster` admission webhook rejects tags that do
+  not start with a digit (regex `^(\d\.?)+` in `cloudnative-pg/machinery` `pkg/postgres/version`),
+  which makes every previous tag unusable via `spec.imageName` — the primary intended consumer.
+  Consumers pinning `pg18-*` tags must switch to `18-*`. Old tags remain published historically
+  but are no longer produced by CI.
+
 ### Added
 
 - Dual-mode entrypoint ([#2](https://github.com/Hubbitus/postgres-cnpg-extensions.container/issues/2)):

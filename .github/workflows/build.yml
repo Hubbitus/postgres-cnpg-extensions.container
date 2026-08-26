@@ -3,7 +3,7 @@ name: build-and-publish
 on:
   push:
     branches: [main]
-    tags: ['v*', 'pg*-*']
+    tags: ['v*', '[0-9]*-*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -40,11 +40,14 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE }}
+          # Tags MUST start with a digit — CloudNativePG webhook validates via
+          # `^(\d\.?)+` regex (cloudnative-pg/machinery pkg/postgres/version).
+          # See issue #6 for the failure mode with the previous `pg18-*` prefix.
           tags: |
-            type=raw,value=pg18-latest,enable={{is_default_branch}}
+            type=raw,value=18-latest,enable={{is_default_branch}}
             type=ref,event=tag
-            type=raw,value=pg18-{{date 'YYYYMMDD'}}-{{sha}},enable={{is_default_branch}}
-            type=sha,prefix=pg18-,format=short
+            type=raw,value=18-{{date 'YYYYMMDD'}}-{{sha}},enable={{is_default_branch}}
+            type=sha,prefix=18-,format=short
 
       - name: Build and push
         id: build
