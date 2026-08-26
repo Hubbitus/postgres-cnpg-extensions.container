@@ -2,7 +2,7 @@
 
 [![Build](https://github.com/Hubbitus/postgres-cnpg-extensions.container/actions/workflows/build.yml/badge.svg)](https://github.com/Hubbitus/postgres-cnpg-extensions.container/actions/workflows/build.yml)
 [![Docker Hub](https://img.shields.io/docker/pulls/hubbitus/postgres-cnpg-extensions?logo=docker&label=Docker%20Hub)](https://hub.docker.com/r/hubbitus/postgres-cnpg-extensions)
-[![Image size](https://img.shields.io/docker/image-size/hubbitus/postgres-cnpg-extensions/pg18-latest?logo=docker)](https://hub.docker.com/r/hubbitus/postgres-cnpg-extensions/tags)
+[![Image size](https://img.shields.io/docker/image-size/hubbitus/postgres-cnpg-extensions/18-latest?logo=docker)](https://hub.docker.com/r/hubbitus/postgres-cnpg-extensions/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 CNPG PostgreSQL 18 image bundling extensions used across Hubbitus projects.
@@ -28,8 +28,8 @@ Extensions added:
 
 Published to Docker Hub as `docker.io/hubbitus/postgres-cnpg-extensions`:
 
-- `pg18-latest` — head of `main`, rebuilt on every push
-- `pg18-YYYYMMDD-<shortsha>` — pinned reproducible daily builds
+- `18-latest` — head of `main`, rebuilt on every push
+- `18-YYYYMMDD-<shortsha>` — pinned reproducible daily builds
 - `v<semver>` — explicit releases (git tag `v0.1.0` → tag `v0.1.0`)
 
 Multi-arch: `linux/amd64` + `linux/arm64`.
@@ -45,7 +45,7 @@ metadata:
   name: pg
 spec:
   instances: 2
-  imageName: docker.io/hubbitus/postgres-cnpg-extensions:pg18-latest
+  imageName: docker.io/hubbitus/postgres-cnpg-extensions:18-latest
   postgresql:
     shared_preload_libraries:
       - pg_cron
@@ -69,7 +69,7 @@ podman run --rm \
     -e POSTGRES_PASSWORD=secret \
     -e POSTGRES_DB=app \
     -p 5432:5432 \
-    docker.io/hubbitus/postgres-cnpg-extensions:pg18-latest
+    docker.io/hubbitus/postgres-cnpg-extensions:18-latest
 ```
 
 Supported env: `POSTGRES_USER` (default `postgres`), `POSTGRES_PASSWORD` (required unless `POSTGRES_HOST_AUTH_METHOD=trust`), `POSTGRES_DB`, `POSTGRES_INITDB_ARGS`, `POSTGRES_HOST_AUTH_METHOD`, `POSTGRES_INITDB_WALDIR`. Init SQL: mount into `/docker-entrypoint-initdb.d/`. See [official postgres docs](https://hub.docker.com/_/postgres) for details.
@@ -83,7 +83,7 @@ podman run --rm \
     -e POSTGRES_PASSWORD=secret \
     -e POSTGRES_DB=app \
     -p 5432:5432 \
-    docker.io/hubbitus/postgres-cnpg-extensions:pg18-latest \
+    docker.io/hubbitus/postgres-cnpg-extensions:18-latest \
     -c config_file=/etc/postgresql-cnpg-extensions.conf
 ```
 
@@ -97,7 +97,7 @@ Under the CNPG operator our `ENTRYPOINT` / `CMD` are silently overridden — no 
 
 ```java
 var image = DockerImageName
-    .parse("docker.io/hubbitus/postgres-cnpg-extensions:pg18-latest")
+    .parse("docker.io/hubbitus/postgres-cnpg-extensions:18-latest")
     .asCompatibleSubstituteFor("postgres");
 try (var pg = new PostgreSQLContainer<>(image)) {
     pg.start();
@@ -112,7 +112,7 @@ try (var pg = new PostgreSQLContainer<>(image)) {
 ```yaml
 services:
   pg:
-    image: docker.io/hubbitus/postgres-cnpg-extensions:pg18-latest
+    image: docker.io/hubbitus/postgres-cnpg-extensions:18-latest
     environment:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
